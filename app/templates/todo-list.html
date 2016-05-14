@@ -1,0 +1,9 @@
+<div class="container">
+    <a class="btn btn-primary" href="#/todo/new">新增</a>
+    <div class="col-md-12">
+        <todo-list></todo-list>
+    </div>
+    <input ng-click="onComplete()" type="button" class="btn btn-primary" value="完成"/>
+    <a href="#/todo/list/nest">跳转到list内嵌页</a>
+    <div ui-view></div>
+</div>

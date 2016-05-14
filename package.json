@@ -1,0 +1,27 @@
+{
+  "name": "angular1.5-test",
+  "version": "1.0.0",
+  "description": "this is a test project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leekangtaqi/angular1.5-test.git"
+  },
+  "author": "leekangtaqi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/leekangtaqi/angular1.5-test/issues"
+  },
+  "homepage": "https://github.com/leekangtaqi/angular1.5-test#readme",
+  "dependencies": {
+    "angular": "1.5.5",
+    "angular-ui-router": "^0.2.18",
+    "bootstrap": "^3.3.6",
+    "jquery": "^2.2.3",
+    "ui-router": "^1.0.0-alpha.3",
+    "zepto": "^1.0.1"
+  }
+}

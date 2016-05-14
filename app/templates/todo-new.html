@@ -1,0 +1,11 @@
+<div class="container">
+    <form name="addTodoForm" class="form-inline" novalidate>
+        <div class="form-group" ng-class="{'has-error': addTodoForm.$dirty && addTodoForm.todoName.$invalid}">
+            <input ng-class="{'form-control': true}" name="todoName" required ng-model="todo.name" type="text"/>
+        </div>
+        <div class="form-group">
+            <input ng-disabled="!addTodoForm.$dirty || addTodoForm.$invalid" type="submit" ng-click="onSubmit()" class="form-control btn btn-primary" value="提交"/>
+            <span ng-show="addTodoForm.$dirty && addTodoForm.todoName.$error.required">待办事项非空</span>
+        </div>
+    </form>
+</div>
