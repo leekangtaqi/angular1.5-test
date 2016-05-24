@@ -172,18 +172,18 @@ app
         return {
             restrict: 'E',
             scope: {},
-            template: `
-                <div class='ng-tree-container'>
-                    <div class="ng-tree-header" ng-if="title">
-                        {{title}}
-                    </div>
-                    <div class="ng-tree-body">
-                        <ul>
+            template:
+                '<div class="ng-tree-container">' +
+                    '<div class="ng-tree-header" ng-if="title">' +
+                        '{{title}}' +
+                    '</div>' +
+                    '<div class="ng-tree-body">' +
+                        '<ul>' +
 
-                        </ul>
-                    </div>
-                </div>
-            `,
+                        '</ul>' +
+                    '</div>' +
+                '</div>'
+            ,
             replace: true,
             link: function($scope, $el, $attrs, $parentCtrl) {
                 $scope.metaMap = {};
