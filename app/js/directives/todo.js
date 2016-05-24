@@ -2,12 +2,15 @@ var app = angular.module('app');
 
 app
     .controller('test', function($scope, $rootScope){
-        var savedData = {};
+        var savedData = [];
         $scope.onSelect = function(){
             var offFn = $rootScope.$on('receive-ng-tree', function(e, data){
                 offFn();
-                savedData = data;
+                if(data){
+                    savedData.push(data);
+                }
             });
+            console.log(savedData);
             $rootScope.$broadcast('popup-ng-tree', savedData);
         }
     })
@@ -31,7 +34,7 @@ app
             $scope.$broadcast('merge-to-request');
         };
         $scope.onCancel = function(){
-            $rootScope.$broadcast('receive-ng-tree', {});
+            $rootScope.$broadcast('receive-ng-tree', null);
             $scope.isShow = false;
         };
         $scope.onSubmit = function(){
@@ -99,7 +102,7 @@ app
                 ]
             },
             {
-                id: 2,
+                id: '2',
                 text: '上海市',
                 children: [
                     {
@@ -133,6 +136,7 @@ app
                 ]
             }
         ];
+
         $scope.mocks2 = {
             id: '2',
             text: '上海市',
@@ -185,7 +189,7 @@ app
                 '</div>'
             ,
             replace: true,
-            link: function($scope, $el, $attrs, $parentCtrl) {
+            link: function($scope, $el, $attrs) {
                 $scope.metaMap = {};
                 $scope.valueMap = {};
                 $scope.foldIcon = $attrs['foldicon'];
@@ -332,7 +336,6 @@ app
                         }).filter(function(n){
                             return n
                         });
-
                         $scope.$emit('submit-response', data);
                     }
                 });
@@ -455,33 +458,64 @@ app
                         }
 
                         if(data && Object.keys(data).length > 0){
-                            var meta = {};
-                            mapDataSource(data, meta);
-                            var keys = Object.keys(meta).map(function(k){
-                                return k;
-                            });
-                            if($scope.role === 'primary'){
-                                Object.keys($scope.metaMap).forEach(function(k){
-                                    if(keys.indexOf((k)) >= 0){
-                                        if($scope.metaMap[k].data.children){
-                                            var tmp = $scope.metaMap[k].data.children;
-                                            if(tmp.filter(function(n){
-                                                return keys.indexOf(n.id) >= 0
-                                            }).length === tmp.length){
-                                                $scope.metaMap[k].data.none = true;
-                                            }
-                                        }else{
-                                            $scope.metaMap[k].data.none = true;
+                            if(!Array.isArray(data)){
+                                data = [data];
+                            }
+                            data.forEach(function(d){
+                                var meta = {};
+                                var keys = [];
+                                mapDataSource(d, meta);
+                                keys = Object.keys(meta).map(function(k){
+                                    return k;
+                                });
+
+                                if($scope.role === 'primary'){
+                                    var roots = Object.keys($scope.metaMap).map(function(k){
+                                        return $scope.metaMap[k]
+                                    }).filter(function(n){
+                                        var data = n.data || n;
+                                        return keys.indexOf(data.id) >= 0 && !n.parent
+                                    });
+                                    if(roots && roots.length){
+                                        for(var i= 0, len=roots.length; i< len; i++){
+                                            recursiveCheck(roots[i]);
                                         }
                                     }
-                                })
-                            }else{
-                                Object.keys($scope.metaMap).forEach(function(k){
-                                    if(keys.indexOf((k)) >= 0){
-                                        $scope.metaMap[k].data.none = false;
+
+                                    function recursiveCheck(node){
+                                        if(!node){
+                                            return true;
+                                        }
+                                        var children = node.children || node.data && node.data.children;
+                                        if(children){
+                                            var t = children.map(function(c){
+                                                return recursiveCheck(c)
+                                            }).filter(function(b){
+                                                return b;
+                                            });
+                                            if(t.length === children.length){
+                                                var d = node.data || node;
+                                                d.none = true;
+                                                return true;
+                                            }
+                                            return false;
+                                        }else{
+                                            var data = node.data || node;
+                                            if(keys.indexOf(data.id) >= 0){
+                                                data.none = true;
+                                                return true;
+                                            }
+                                            return false;
+                                        }
                                     }
-                                })
-                            }
+                                }else{
+                                    Object.keys($scope.metaMap).forEach(function(k){
+                                        if(keys.indexOf((k)) >= 0){
+                                            $scope.metaMap[k].data.none = false;
+                                        }
+                                    })
+                                }
+                            })
                         }
 
                         render();
