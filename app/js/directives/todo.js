@@ -10,7 +10,6 @@ app
                     savedData.push(data);
                 }
             });
-            console.log(savedData);
             $rootScope.$broadcast('popup-ng-tree', savedData);
         }
     })
@@ -458,64 +457,130 @@ app
                         }
 
                         if(data && Object.keys(data).length > 0){
-                            if(!Array.isArray(data)){
-                                data = [data];
-                            }
-                            data.forEach(function(d){
-                                var meta = {};
-                                var keys = [];
-                                mapDataSource(d, meta);
-                                keys = Object.keys(meta).map(function(k){
-                                    return k;
-                                });
-
-                                if($scope.role === 'primary'){
-                                    var roots = Object.keys($scope.metaMap).map(function(k){
-                                        return $scope.metaMap[k]
+                            var isNestArray = Array.isArray(data[0]);
+                            var meta = {};
+                            var keys = [];
+                            //preload
+                            if(isNestArray){
+                                var leafs = [];
+                                var leafsArr = data.map(function(state){
+                                    //merge
+                                    var m ={};
+                                    mapDataSource(state, m);
+                                    return Object.keys(m).map(function(k){
+                                        return m[k]
                                     }).filter(function(n){
                                         var data = n.data || n;
-                                        return keys.indexOf(data.id) >= 0 && !n.parent
+                                        return !data.children
                                     });
-                                    if(roots && roots.length){
-                                        for(var i= 0, len=roots.length; i< len; i++){
-                                            recursiveCheck(roots[i]);
+                                }).forEach(function(ar){
+                                    ar.forEach(function(leaf){
+                                        leafs.push(leaf);
+                                    });
+                                });
+                                var arr = [];
+                                var tmps = [];
+                                composeCompleteTree(leafs, arr);
+
+                                data = arr;
+                                function composeCompleteTree(leafs, arr){
+                                    leafs.forEach(function(leaf){
+                                        recur(leaf);
+                                    });
+                                    function recur(leaf){
+                                        if(!leaf){
+                                            return;
+                                        }
+                                        if(leaf.parent && leaf.parent.id || leaf.parent){
+                                            var meta = $scope.metaMap[leaf.parent.id || leaf.parent];
+                                            var data = meta.data;
+                                            var part = null;
+                                            var me = null;
+                                            var idx = tmps.map(function(tmp){return tmp.id;}).indexOf(leaf.id || leaf.data.id);
+                                            if(idx >= 0){
+                                                me = tmps.slice(idx, idx+1)[0];
+                                            }else{
+                                                me = {
+                                                    id: leaf.id || leaf.data.id,
+                                                    text: leaf.text || leaf.data.text,
+                                                    parent: data && data.id || null
+                                                };
+                                                tmps.push(me);
+                                            }
+                                            var index = tmps.map(function(tmp){return tmp.id;}).indexOf(data.id);
+                                            if(index >= 0){
+                                                part = tmps.slice(index, index+1)[0];
+                                                part.children.push(me);
+                                            }else{
+                                                part = {
+                                                    id: data.id,
+                                                    text: data.text,
+                                                    parent: meta.parent && meta.parent.id || meta.parent || null
+                                                };
+                                                part.children = [];
+                                                part.children.push(me);
+                                                tmps.push(part);
+                                            }
+                                            recur(part);
+                                        }else{
+                                            arr.push(leaf);
                                         }
                                     }
+                                }
+                            }
 
-                                    function recursiveCheck(node){
-                                        if(!node){
+                            mapDataSource(data, meta);
+
+                            keys = Object.keys(meta).map(function(k){
+                                return k;
+                            });
+
+                            if($scope.role === 'primary'){
+                                var roots = Object.keys($scope.metaMap).map(function(k){
+                                    return $scope.metaMap[k]
+                                }).filter(function(n){
+                                    var data = n.data || n;
+                                    return keys.indexOf(data.id) >= 0 && !n.parent
+                                });
+                                if(roots && roots.length){
+                                    for(var i= 0, len=roots.length; i< len; i++){
+                                        recursiveCheck(roots[i]);
+                                    }
+                                }
+
+                                function recursiveCheck(node){
+                                    if(!node){
+                                        return;
+                                    }
+                                    var children = node.children || node.data && node.data.children;
+                                    if(children){
+                                        var t = children.map(function(c){
+                                            return recursiveCheck(c)
+                                        }).filter(function(b){
+                                            return b;
+                                        });
+                                        if(t.length === children.length){
+                                            var d = node.data || node;
+                                            d.none = true;
                                             return true;
                                         }
-                                        var children = node.children || node.data && node.data.children;
-                                        if(children){
-                                            var t = children.map(function(c){
-                                                return recursiveCheck(c)
-                                            }).filter(function(b){
-                                                return b;
-                                            });
-                                            if(t.length === children.length){
-                                                var d = node.data || node;
-                                                d.none = true;
-                                                return true;
-                                            }
-                                            return false;
-                                        }else{
-                                            var data = node.data || node;
-                                            if(keys.indexOf(data.id) >= 0){
-                                                data.none = true;
-                                                return true;
-                                            }
-                                            return false;
+                                        return false;
+                                    }else{
+                                        var data = node.data || node;
+                                        if(keys.indexOf(data.id) >= 0){
+                                            data.none = true;
+                                            return true;
                                         }
+                                        return false;
                                     }
-                                }else{
-                                    Object.keys($scope.metaMap).forEach(function(k){
-                                        if(keys.indexOf((k)) >= 0){
-                                            $scope.metaMap[k].data.none = false;
-                                        }
-                                    })
                                 }
-                            })
+                            }else{
+                                Object.keys($scope.metaMap).forEach(function(k){
+                                    //if(keys.indexOf(k) >= 0){
+                                      $scope.metaMap[k].data.none = true;
+                                    //}
+                                })
+                            }
                         }
 
                         render();
