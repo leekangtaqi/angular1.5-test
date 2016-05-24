@@ -1,7 +1,9 @@
 var app = angular.module('app');
 
 app.controller('todoCtrl', ['$scope', '$location', 'todoService', function($scope, $location, todoService){
-    $scope.todoList = todoService.loadTodoList();
+    todoService.loadTodoList().then(function(data){
+        $scope.todoList = data
+    });
     $scope.removeArr = [];
     $scope.todo = {name: ''};
     $scope.onSubmit = function(){
@@ -17,5 +19,5 @@ app.controller('todoCtrl', ['$scope', '$location', 'todoService', function($scop
     };
     $scope.onComplete = function(){
         $scope.todoList = todoService.remove($scope.removeArr);
-    }
+    };
 }]);

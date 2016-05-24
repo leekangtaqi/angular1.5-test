@@ -37,7 +37,8 @@ app.config(function($stateProvider, $urlRouterProvider){
 });
 
 app.run(['$rootScope', '$state', function($rootScope, $state){
-    console.log("module app is run.")
+    console.log("module app is run.");
+
     $rootScope.$on('$stateChangeStart', function(evt, to, params) {
         if (to.redirectTo) {
             evt.preventDefault();

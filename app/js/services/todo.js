@@ -9,8 +9,17 @@ app.factory('todoService', ['$http', '$timeout', function($http, $timeout){
             name: '买烟'
         }
     ];
+    //'Accept-Encoding': 'gzip'
     var loadTodoList = function(){
-        return todos
+        return $http({
+            url: 'http://localhost:3030/test',
+            method: 'get',
+            headers: {
+                'Accept-Encoding': 'gzip'
+            }
+        }).then(function(){
+            return todos;
+        })
     };
     var addTodo = function(todo){
         todos.push(todo);
@@ -19,7 +28,7 @@ app.factory('todoService', ['$http', '$timeout', function($http, $timeout){
         return todos = todos.filter(function(todo){
             return ts.indexOf(todo) < 0;
         })
-    }
+    };
     return {
         loadTodoList: loadTodoList,
         addTodo: addTodo,

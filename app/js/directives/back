@@ -1,0 +1,819 @@
+var app = angular.module('app');
+
+app
+    .directive('todoList', function(){
+        return {
+            restrict: 'E',
+            controller: 'todoCtrl',
+            template: '<ul>' +
+            '<li ng-repeat="todo in todoList">' +
+                '<div><input type="checkbox" ng-click="onSelectTodo(this.todo)"/>{{todo.name}}<div>' +
+            '</li>' +
+            '</ul>'
+        }
+    })
+    .controller('ngTreeCtrl', function($scope, $timeout){
+        $scope.test = {};
+        $scope.test.show = true;
+        $scope.onClick = function(){
+            $scope.$broadcast('merge-to-request');
+            $scope.$on('merge-ok', function(data){
+
+            });
+        };
+        $scope.$on('merge-to-response', function(e, data){
+            $scope.$broadcast('merge-to-feedback', data);
+        });
+        $scope.$on('datasource-request', function(){
+            var offFn = $scope.$on('datasource-response', function(e, data){
+                $scope.$broadcast('datasource-feedback', data);
+                offFn();
+            });
+            $scope.$broadcast('datasource-request-repeater');
+        });
+        $scope.$on('merge-back-request', function(e, data){
+            $scope.$broadcast('merge-back-response', data);
+        });
+        $scope.mocks1 = {
+            id: '1',
+            text: '北京市',
+            children: [
+                {
+                    id: '11',
+                    text: '市区',
+                    children: [
+                        {
+                            id: '111',
+                            text: '东城区'
+                        },
+                        {
+                            id: '112',
+                            text: '西城区'
+                        }
+                    ]
+                },
+                {
+                    id: '12',
+                    text: '县',
+                    children: [
+                        {
+                            id: '121',
+                            text: '平谷县'
+                        },
+                        {
+                            id: '122',
+                            text: '怀柔县'
+                        }
+                    ]
+                }
+            ]
+        };
+        $scope.mocks2 = {
+            id: '2',
+            text: '上海市',
+            children: [
+                {
+                    id: '21',
+                    text: '市区',
+                    children: [
+                        {
+                            id: '211',
+                            text: 'ss'
+                        },
+                        {
+                            id: '212',
+                            text: 'xx'
+                        }
+                    ]
+                },
+                {
+                    id: '22',
+                    text: '县',
+                    children: [
+                        {
+                            id: '221',
+                            text: 'ttt'
+                        },
+                        {
+                            id: '222',
+                            text: 'bb'
+                        }
+                    ]
+                }
+            ]
+        }
+    })
+    .directive('ngTree', function($compile){
+        return {
+            restrict: 'E',
+            scope: {
+
+            },
+            template: `
+                <div class='ng-tree-container'>
+                    <div class="ng-tree-header" ng-if="title">
+                        {{title}}
+                    </div>
+                    <div class="ng-tree-body">
+                        <ul>
+
+                        </ul>
+                    </div>
+                </div>
+            `,
+            replace: true,
+            controller: function($scope){
+                $scope.selected = {children: []};
+            },
+            link: function($scope, $el, $attrs, $parentCtrl) {
+                var trash = {};
+                $scope.metaMap = {};
+                $scope.foldIcon = $attrs['foldicon'];
+                $scope.fileIcon = $attrs['fileicon'];
+                $scope.title = $attrs['title'];
+                $scope.id = $attrs.id || 'id';
+                $scope.role = $attrs['role'];
+                $scope.canRemove = !!$attrs.remove || false;
+                $scope.valueMap = {};
+                init();
+                $scope.onClick = function (id) {
+                    var meta = $scope.metaMap[id];
+                    var data = meta.data;
+                    var selected = !(!!meta.data.selected);
+                    var isNotLeaf = !!meta.data.children;
+                    if(isNotLeaf){
+                        function recursiveSelect(n){
+                            if(!n.children){
+                                return;
+                            }
+                            n.children.map(function(t){
+                                console.log(t);
+                                if(t && t.children){
+                                    return recursiveSelect(t)
+                                }
+                                t.selected = selected;
+                            })
+                        }
+                        recursiveSelect(data);
+                    }else{
+                        data.selected = selected;
+                    }
+                    //var lastState = $scope.selected;
+                    //var activeNode = null;
+                    //walkState(lastState, function (node) {
+                    //    if (node.id == id) {
+                    //        wireNodes(lastState.children, lastState);
+                    //        activeNode = node;
+                    //        var hints = [];
+                    //        composeHints(node, hints);
+                    //        diffDeposeState(hints);
+                    //    }
+                    //});
+                    //if(!activeNode){
+                    //    walkState(getStateSnapshot(), function (node) {
+                    //        if (node.id == id) {
+                    //            var hints = [];
+                    //            composeHints(node, hints);
+                    //            hints.reverse();
+                    //            diffState(hints, lastState);
+                    //        }
+                    //    });
+                    //}
+                    //function diffDeposeState(hints){
+                    //    if(!hints.length){
+                    //        return;
+                    //    }
+                    //    if(!hints[1]){
+                    //        $scope.selected.children.splice($scope.selected.children.indexOf(hints[0]), 1);
+                    //        return;
+                    //    }
+                    //    deposeState(hints[0], hints);
+                    //}
+                    //function deposeState(node, hints){
+                    //    if(!node || !hints.length || !hints[1] || !hints[1].children || !hints[1].children.length){
+                    //        return;
+                    //    }
+                    //    var parent = hints[1];
+                    //    parent.children.splice(parent.children.indexOf(node), 1);
+                    //    if(!hasSibling(parent)){
+                    //        return deposeState(parent, hints.slice(1));
+                    //    }
+                    //}
+                    //function hasSibling(root){
+                    //    return root.children.length > 0;
+                    //}
+                    //function diffState(hints, lastState) {
+                    //    ensureParent(lastState, hints);
+                    //    function ensureParent(cursor, arr){
+                    //        if(!arr.length || !cursor){
+                    //            return;
+                    //        }
+                    //        var hint = arr[0];
+                    //        if(!cursor.children){
+                    //            cursor.children = [];
+                    //        }
+                    //        var next = getNodeFromSet(cursor.children, hint, isEqual);
+                    //        var isNotFound = !next;
+                    //        if(isNotFound){
+                    //            if(arr.length !=1){
+                    //                var newNode = exclude(hint, 'children');
+                    //                cursor.children.push(newNode);
+                    //                return ensureParent(cursor.children[0], arr.slice(1));
+                    //            }
+                    //            else{
+                    //                cursor.children.push(hint);
+                    //                return ensureParent(next, arr.slice(1));
+                    //            }
+                    //        }
+                    //        ensureParent(next, arr.slice(1));
+                    //    }
+                    //}
+                    //function getNodeFromSet(arr, o, fn){
+                    //    if(!arr.length){
+                    //        return null;
+                    //    }
+                    //    var res = fn(arr[0], o);
+                    //    if(res){
+                    //        return res;
+                    //    }
+                    //    return getNodeFromSet(arr.slice(1), o, fn);
+                    //}
+                    //function isEqual(o1, o2, identify){
+                    //    var id = identify ? identify : 'id';
+                    //    if(o1[id] === o2[id]){
+                    //        return o1;
+                    //    }
+                    //    return false;
+                    //}
+                    //function composeHints(node, hints) {
+                    //    hints.push(node);
+                    //    if (node._parent) {
+                    //        composeHints(node._parent, hints);
+                    //    }
+                    //}
+                };
+                $scope.onSelect = function(id){
+                    var res = false;
+                    walkState($scope.selected, function(node){
+                        if(node.id == id){
+                            res = true;
+                        }
+                    });
+                    return res;
+                };
+                $scope.onToggle = function(e, id){
+                    var state = null;
+                    var target = $scope.metaMap[id].data;
+                    if(!target.children){
+                        return;
+                    }
+                    state = !(!!target.children[0].show);
+                    recurToggle(id, state);
+                    function recurToggle(id, state){
+                        if(!id){
+                            return;
+                        }
+                        var target = $scope.metaMap[id].data;
+                        if(!target.children){
+                            return;
+                        }
+                        target.children.forEach(function(n){
+                            n.show = state;
+                            recurToggle(n.id, state);
+                        });
+                    }
+                    e.stopPropagation();
+                };
+                $scope.onRemove = function(id, e){
+                    recursiveRemove(id, e);
+                    handleSelectedDataSource();
+                    composeExternalInterfaceAndEmitEvent();
+                    resetTrash();
+                    function recursiveRemove(id, e) {
+                        if (!id) {
+                            return;
+                        }
+                        var target = $scope.metaMap[id];
+                        if (!target) {
+                            return;
+                        }
+                        trash[id] = {
+                            parent: $scope.metaMap[id].parent && $scope.metaMap[id].parent.id || null,
+                            data: deepClone({}, exclude($scope.metaMap[id].data, 'show'))
+                        };
+                        if (target.parent && target.parent.children) {
+                            var index = target.parent.children.indexOf(target.data);
+                            if (index >= 0) {
+                                target.parent.children.splice(index, 1, undefined);
+                            }
+                        }
+                        if (target.data && target.data.children && target.data.children.length) {
+                            target.data.children.map(function (t, i) {
+                                recursiveRemove(t.id);
+                            })
+                        }
+                        delete $scope.metaMap[id];
+                        if (target.parent && target.parent.children) {
+                            target.parent.children = target.parent.children.filter(function (t) {
+                                return t;
+                            })
+                        }
+                        if (target.parent && target.parent.children && !target.parent.children.length) {
+                            recursiveRemove(target.parent.id);
+                        }
+                        e && e.stopPropagation();
+                    }
+                    function snapshot(){
+                        var snapshotParts = Object.keys($scope.metaMap).map(function(k){
+                            return deepClone({}, exclude($scope.metaMap[k].data, 'show'));
+                        }).reduce(function(acc, curr){
+                            acc[curr.id] = {
+                                data: curr
+                            };
+                            return acc;
+                        }, {});
+                        return Object.keys(snapshotParts).reduce(function(a, c){
+                            return a[snapshotParts[c].data.id] = {
+                                data: snapshotParts[c],
+                                parent:
+                                snapshotParts[c].data.parent &&
+                                snapshotParts[snapshotParts[c].data.parent.id] ||
+                                null
+                            }
+                        }, {})
+                    }
+                    function resetTrash(){
+                        trash = {};
+                    }
+                    function composeExternalInterfaceAndEmitEvent(){
+                        var meta = Object.keys(trash).map(function(id){
+                            return {
+                                data: trash[id].data,
+                                parent: trash[trash[id].parent] && trash[trash[id].parent].data || null
+                            }
+                        }).reduce(function(a, c){
+                            a[c.data.id] = {
+                                data: c.data,
+                                parent: c.parent
+                            };
+                            return a;
+                        }, {});
+                        metaWireChildrenByParent(meta, function(data){
+                            $scope.canRemove && $scope.$emit('merge-back-request', data);
+                        });
+                    }
+                    function handleSelectedDataSource(){
+                        if(selectedIsEmpty()){
+                            return;
+                        }
+                        walkState($scope.selected, function(node){
+                            Object.keys(trash).filter(function(id){
+                                if(node.id === id){
+                                    wireNodes($scope.selected.children, $scope.selected);
+                                    recurRefactor(node);
+                                    function recurRefactor(node){
+                                        if(!node){
+                                            return;
+                                        }
+                                        var parent = null;
+                                        if(node._parent){
+                                            parent = node._parent;
+                                        }else{
+                                            parent = $scope.selected;
+                                        }
+                                        if(parent.children.indexOf(node) >= 0){
+                                            parent.children.splice(parent.children.indexOf(node), 1);
+                                            if(!parent.children.length){
+                                                recurRefactor(parent);
+                                            }
+                                        }
+                                    }
+
+                                }
+                            })
+                        });
+                        function selectedIsEmpty(){
+                            return !$scope.selected.children || !$scope.selected.children.length;
+                        }
+                    }
+                };
+                $scope.$on('fetch', function(e, data){
+                    if($scope.role === 'primary'){
+                        //todo 删除metaMap  -- 遍历selected, 从metaMap拿出数据, 并删除
+                        //todo 清空selected
+                        //todo $emit数据
+                    }
+                });
+                $scope.$on('merge-to', function(){
+                    if($scope.role === 'secondary'){
+                        //todo merge 到自己  -- 遍历树, 从数组中拿出, 并插入
+                        //todo $emit merge-to-ok
+                    }
+                });
+                $scope.$on('merge-back-response', function(e, data){
+                    if($scope.role === 'primary'){
+                        Object.keys(data).map(function(k){
+                            if($scope.metaMap[k]){
+                                return;
+                            }
+                            $scope.metaMap[k] = data[k];
+                        });
+
+                        //console.log($scope.selected);
+                        render();
+                        //update selected
+                    }
+                });
+                $scope.$on('merge-to-feedback', function(e, ids){
+                    if($scope.role === 'secondary'){
+                        var vm = null;
+                        getDataSource(function(data){
+                            vm = data.vm;
+                        });
+                        var completionTree = {};
+                        var nodes = ids.map(function(id){
+                            return createNode(id, vm)
+                        });
+                        var parts = nodes.filter(function(node){
+                            return nodes.map(function(n){
+                                return n.data.id
+                            }).indexOf(node.parent) <0
+                        });
+                        parts.map(function(p){
+                            recur(p);
+                            //if parent null or in metamap , merge
+                            //else completion
+                            function recur(p){
+                                if(!p.parent || Object.keys($scope.metaMap).indexOf(p.parent) >= 0){
+                                    return merge(p, p.parent);
+                                }
+                                var n = createNode(p.parent, vm, true);
+                                var node = n.data;
+                                node.children = [];
+                                node.children.push(p.data);
+                                recur({data: node, parent: n.parent});
+                            }
+                        });
+                        function merge(node, entry){
+                            console.log(node);
+                            if(entry){
+                                $scope.metaMap[entry].data.children.push(node.data);
+                            }
+                            //recur to add metaMap
+                            function recur(node){
+                                if(!node.children){
+                                    return;
+                                }
+                                node.show= true;
+                                $scope.metaMap[node.id] = {
+                                    data: node,
+                                    parent: getParentIdById(node.id, vm)
+                                };
+                                node.children.map(function(n){
+                                    n.show = true;
+                                    $scope.metaMap[n.id] = {
+                                        data: n,
+                                        parent: getParentIdById(n.id, vm)
+                                    };
+                                    recur(n);
+                                })
+                            }
+                            recur(node.data);
+                        }
+                        console.log($scope.metaMap)
+                        render();
+                    }
+                });
+                $scope.$on('datasource-request-repeater', function(e){
+                    if($scope.role === 'primary'){
+                        $scope.$emit('datasource-response', {
+                            vm: $scope.valueMap,
+                            om: $scope.dataSource
+                        });
+                    }
+                });
+                $scope.$on('merge-to-request', function(e){
+                    if($scope.role === 'primary'){
+                        //滤掉selected
+                        //emit selected数据(序列化)
+                        var selected = [];
+                        var rest = Object.keys($scope.metaMap).map(function(k){
+                            var meta = $scope.metaMap[k];
+                            var data = meta.data;
+                            if(data.selected){
+                                //stringify data
+                                selected.push(data.id);
+                                meta.parent
+                                &&
+                                meta.parent.children
+                                && meta.parent.children.splice(meta.parent.children.indexOf(meta.data), 1);
+                                return null
+                            }
+                            return meta;
+                        });
+                        //delete selected
+                        $scope.metaMap = rest.reduce(function(a, c){
+                            if(c){
+                                a[c.data.id] = c;
+                            }
+                            return a;
+                        }, {});
+                        $scope.$emit('merge-to-response', selected);
+                    }
+                });
+                function init(){
+                    if (!$attrs.label) {
+                        $scope.label = $attrs['label'];
+                        throw new Error('ng-tree directive expected a label attribute');
+                    }
+                    if($attrs.datasource){
+                        try {
+                            $scope.dataSource = JSON.parse($attrs.datasource);
+                        } catch (e) {
+                            throw new Error('ng-tree directive expected a data source attribute');
+                        }
+                        !Array.isArray($scope.dataSource) && ($scope.dataSource = [$scope.dataSource]);
+                        mapDataSource($scope.dataSource, $scope.metaMap);
+                        deepMapDataSource($scope.dataSource, $scope.valueMap);
+                        console.log($scope.valueMap);
+                        render();
+                        withShow($scope.dataSource);
+                    }
+                }
+                $scope.onValidateSelected = function(id){
+                    if(!$scope.metaMap[id] || !$scope.metaMap[id].data){
+                        return;
+                    }
+                    var meta = $scope.metaMap[id].data;
+                    if(meta && meta.children){
+                        var res = meta.children.map(function(t){
+                            return t.selected || false
+                        }).filter(function(t){
+                            return t
+                        }).length === meta.children.length;
+                        meta.selected = res;
+                    }
+                    return $scope.metaMap[id].data.selected;
+                };
+
+                function render(){
+                    Object.keys($scope.metaMap).filter(function(m){
+                        return !$scope.metaMap[m].parent
+                    }).forEach(function(k){
+                        var origin = $scope.metaMap[k];
+                        var item = origin.data;
+                        function recursiveCreateNode(item, parent, level){
+                            if(!item){
+                                return;
+                            }
+                            ensureEntry(origin, parent, level, done);
+                            function done(entry){
+                                var insertedNode = angular.element(entry);
+                                var entryIsUl = insertedNode.is('ul');
+                                if(!elIsExist(insertedNode, item.id)){
+                                    var ngShow = 'metaMap[' + item.id + '].data.show';
+                                    var html =
+                                        '<li key="'+ item.id +'" ng-show="' + ngShow + '" ng-class="{test: onValidateSelected(' + item.id + ')}" class="ng-tree-li-level-' + level + '" ng-click="onClick(' + item.id + ')">' +
+                                        '<b ng-if="metaMap[' + item.id + '].data.children" class="ng-tree-toggle" ng-click="onToggle($event, '+ item.id + ')"></b>' +
+                                        '<span>' + item.text + '</span>' +
+                                        '<b ng-click="onRemove('+ item.id +', $event)" class="ng-tree-remove" ng-if="canRemove">' +
+                                        '</b>' +
+                                        '</li>';
+                                    if(entryIsUl){
+                                        insertedNode = insertedNode.append($compile(html)($scope));
+                                    }else{
+                                        insertedNode.after($compile(html)($scope));
+                                        //insertedNode.after($compile('<li key="12" ng-class="{test: onValidateSelected(' + item.id + ')}" class="ng-tree-li-level-' + level + '" >' + item.text + '</li>')($scope));
+                                        //insertedNode.after($compile('<div>1111</div>')($scope));
+                                    }
+                                }
+
+                                    ++level;
+                                    insertedNode = $el.find('.ng-tree-body >ul>li[key=' + item.id + ']').get(0);
+                                    console.log(insertedNode)
+                                    item.children && item.children.map(function(child){
+                                        recursiveCreateNode(child, insertedNode, level);
+                                    });
+                            }
+                        }
+                        recursiveCreateNode(item, null, 1);
+                        function elIsExist(root, key){
+                            return $el.find('.ng-tree-body >ul').find('>li[key='+ key +']').length > 0 || root.find('>li[key='+ key +']:hidden').length > 0;
+                        }
+                        function ensureEntry(origin, parent, level, done){
+                            if(parent){
+                                origin.data.show = true;
+                                return done(parent);
+                            }
+                            var container = $el.find('.ng-tree-body');
+                            if(!origin.parent){
+                                origin.data.show = true;
+                                return done(container.find('>ul'));
+                            }
+                            done(container.find('>ul>li[key=' + (origin.parent.id || origin.parent) + ']'));
+                        }
+                    });
+                }
+                function mapToTree(m){
+                    var nodes = Object.keys(m).map(function(k){
+                        var meta = m[k];
+                        return {
+                            id: meta.data.id,
+                            text: meta.data.text,
+                            children: [],
+                            parent: meta.parent && meta.parent.id || null
+                        }
+                    });
+                    var roots = nodes.map(function(d){
+                        var tmp = nodes.filter(function(s){
+                            return s.id === d.parent
+                        })[0];
+                        if(tmp){
+                            tmp.children.push(d);
+                        }
+                        return d;
+                    }).filter(function(d){
+                        return !d.parent
+                    });
+                    return {
+                        children: roots
+                    };
+                }
+                function deepMapDataSource(data, val){
+                    if(!Array.isArray(data)){
+                        data = data.children;
+                    }
+                    function recur(ar, root){
+                        ar.map(function(n){
+                            val[n.id] = {
+
+                                data: {
+                                    id: n.id,
+                                    text: n.text,
+                                    children: n.children && n.children.map(function(c){
+                                        return c.id
+                                    })
+                                },
+                                parent: root && root.id || null
+                            };
+                            if(n.children){
+                                recur(n.children, n);
+                            }
+                        })
+                    }
+                    recur(data, null);
+                }
+                function mapDataSource(data, meta){
+                    if(!Array.isArray(data)){
+                        data = data.children;
+                    }
+                    function recur(ar, root){
+                        ar.map(function(n){
+                            meta[n.id] = {
+                                data: n,
+                                parent: root
+                            };
+                            if(n.children){
+                                recur(n.children, n);
+                            }
+                        })
+                    }
+                    recur(data, null);
+                }
+                function withShow(ar){
+                    ar.forEach(function(i){
+                        i.show = true;
+                    })
+                }
+                function createNode(id, vm, lean){
+                    var n = {
+                        data: {
+                            id: id,
+                            text: vm[id].data.text,
+                        },
+                        parent: vm[id].parent
+                    };
+                    if(vm[id].data.children && !lean){
+                        n.data['children'] = vm[id].data.children.map(function(id){
+                            return createNode(id, vm, lean).data;
+                        });
+                    }
+                    return n;
+                }
+                function deepClone(root, o){
+                    if(Array.isArray(o)){
+                        root = o.map(function(i){
+                            if(typeof o === 'object'){
+                                return deepClone({}, i)
+                            }
+                            return i;
+                        });
+                        return root;
+                    }
+                    else if(typeof o === 'object'){
+                        for(var p in o){
+                            root[p] = deepClone({}, o[p]);
+                        }
+                        return root;
+                    }
+                    else{
+                        root = o;
+                        return root;
+                    }
+                }
+                function walkState(arr, fn) {
+                    !Array.isArray(arr) && (arr = arr.children);
+                    if (!arr || !arr.length) {
+                        return;
+                    }
+                    return arr.map(function (state) {
+                        var res = fn(state);
+                        if (res) {
+                            return res;
+                        }
+                        if(state.children){
+                            return walkState(state.children, fn);
+                        }
+                    }).reduce(function(a, c){
+                        return c ? c : a;
+                    }, undefined);
+                }
+                function selector(o, n, isEqual){
+                    if(Array.isArray(o)){
+                        return o.map(function(i){
+                            return selector(i, n, isEqual)
+                        }).reduce(function(a, c){
+                            return c? c: a;
+                        }, undefined);
+                    }
+                    else if(typeof o === 'object'){
+                        var flag = isEqual(o, n);
+                        if(flag){
+                            return o;
+                        }
+                        for(var p in o){
+                            var node = selector(o[p], n, isEqual);
+                            if(node){
+                                return node;
+                            }
+                        }
+                        return null;
+                    }
+                }
+                function getStateSnapshot(){
+                    var meta = deepClone({}, mapToTree($scope.metaMap));
+                    wireNodes(meta.children);
+                    return meta;
+                }
+                function metaWireChildrenByParent(meta, done){
+                    Object.keys(meta).map(function(k){
+                        var parent = meta[k].parent;
+                        var node = meta[k].data;
+                        if(parent){
+                            meta[parent.id].data.children.push(node);
+                        }
+                    });
+                    getDataSource(function(ds){
+                        console.log(ds);
+                        done(meta);
+                    });
+                }
+                function getDataSource(done){
+                    if($scope.role === 'secondary'){
+                        var offFn = $scope.$on('datasource-feedback', function(e, ds){
+                            done(ds);
+                            offFn();
+                        });
+                        $scope.$emit('datasource-request');
+                    }
+                }
+                function getParentIdById(id, vm){
+                    return vm[id].parent
+                }
+                function wireNodes(nodes, parent){
+                    if(!nodes.length){
+                        return;
+                    }
+                    nodes.map(function(node){
+                        node._parent = parent;
+                        if(node.children){
+                            wireNodes(node.children, node);
+                        }
+                    })
+                }
+                function exclude() {
+                    var o = {};
+                    var args = [].slice.apply(arguments);
+                    var source = args[0];
+                    var rest = args.slice(1);
+                    for (var p in source) {
+                        if (rest.indexOf(p) < 0) {
+                            o[p] = source[p]
+                        }
+                    }
+                    return o;
+                }
+            }
+        }
+    });
+
